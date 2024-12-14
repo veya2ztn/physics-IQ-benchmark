@@ -1,0 +1,8 @@
+argparse
+opencv-python
+matplotlib
+numpy
+pandas
+moviepy
+Pillow
+tqdm
