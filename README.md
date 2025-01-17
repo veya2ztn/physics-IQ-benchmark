@@ -156,9 +156,10 @@ python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_
 
 ```latex
 @article{motamed2025physics,
-      title={Do generative video models learn physical principles from watching videos?},
-      author={Motamed, Saman and Culp, Laura and Swersky, Kevin and Jaini, Priyank and Geirhos, Robert},
-      year={2025},
+  title={Do generative video models learn physical principles from watching videos?},
+  author={Saman Motamed and Laura Culp and Kevin Swersky and Priyank Jaini and Robert Geirhos},
+  journal={arXiv preprint arXiv:2501.09038},
+  year={2025}
 }
 ```
 
