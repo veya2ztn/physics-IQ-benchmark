@@ -93,7 +93,7 @@ def process_videos(
   scenario_data = []
   processed_scenarios = set()
   gen_video_duration_frames = get_video_frame_count(
-      os.path.join(generated_folders, os.listdir(generated_folders)[0])
+      os.path.join(generated_folders, sorted(os.listdir(generated_folders)[0]))
   )
 
   def mse_per_frame(video1, video2):
@@ -163,7 +163,7 @@ def process_videos(
   scenario_data = []
   processed_scenarios = set()
   gen_video_duration_frames = get_video_frame_count(
-      os.path.join(generated_folders, os.listdir(generated_folders)[0])
+      os.path.join(generated_folders, sorted(os.listdir(generated_folders)[0]))
   )
 
   consider_frames = fps * 5
@@ -179,7 +179,7 @@ def process_videos(
       total=len(
           set(
               '_'.join(f.split('_')[:-2])
-              for f in os.listdir(real_folders)
+              for f in sorted(os.listdir(real_folders))
           )
       ) // 6,
       desc='Processing scenarios'
@@ -399,7 +399,7 @@ def process_videos(
   scenario_data = []
 
   # First pass: Populate scenario_info with both take-1 and take-2 IDs per view
-  for real_file in os.listdir(real_folders):
+  for real_file in sorted(os.listdir(real_folders)):
       if real_file.endswith('.mp4'):
           parts = real_file.split('_')
           if len(parts) < 6:

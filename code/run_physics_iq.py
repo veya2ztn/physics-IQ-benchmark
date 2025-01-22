@@ -87,7 +87,7 @@ def validate_folder_files_exist(
   if not os.path.exists(folder):
     raise FileNotFoundError(f"{description} folder does not exist: {folder}")
 
-  actual_files = {f for f in os.listdir(folder) if f.endswith(".mp4")}
+  actual_files = {f for f in sorted(os.listdir(folder)) if f.endswith(".mp4")}
   fps = int(description.split(" ")[-1])
   expected_files = {f.replace('30FPS', f'{fps}FPS') for f in actual_files}
   missing_files = expected_files - actual_files
@@ -138,11 +138,11 @@ def validate_video_files(
   
 
   video_files = {
-    f for f in os.listdir(input_folder) if f.endswith(".mp4")
+    f for f in sorted(os.listdir(input_folder)) if f.endswith(".mp4")
   }
 
   video_files = {
-    f.replace('30FPS', f'{fps}FPS') for f in os.listdir(input_folder) if f.endswith(".mp4")
+    f.replace('30FPS', f'{fps}FPS') for f in sorted(os.listdir(input_folder)) if f.endswith(".mp4")
   }
 
 
@@ -174,7 +174,7 @@ def get_video_fps(input_folder: str) -> float:
   Raises:
     ValueError: If no MP4 files are found or FPS values are inconsistent.
   """
-  video_files = [f for f in os.listdir(input_folder) if f.endswith(".mp4")]
+  video_files = [f for f in sorted(os.listdir(input_folder)) if f.endswith(".mp4")]
 
   if not video_files:
       raise ValueError(f"No MP4 files found in {input_folder}.")
@@ -198,8 +198,8 @@ def ensure_real_videos_at_fps(
     output_folder: str, target_fps: float, descriptions_file: str
 ) -> str:
   """
-  Ensures that the physics-iq-benchmark/split-videos/testing-videos/{fps}FPS folder exists, generating it
-  from physics-iq-benchmark/split-videos/testing-videos/30FPS if necessary.
+  Ensures that the physics-IQ-benchmark/split-videos/testing/{fps}FPS folder exists, generating it
+  from physics-IQ-benchmark/split-videos/testing/30FPS if necessary.
 
   Args:
     output_folder: Path to the output folder.
@@ -209,7 +209,7 @@ def ensure_real_videos_at_fps(
   Returns:
     Path to the folder containing the real videos at the target FPS.
   """
-  testing_folder = "./physics-iq-benchmark/split-videos/testing-videos"
+  testing_folder = "./physics-IQ-benchmark/split-videos/testing"
   thirty_fps_folder = os.path.join(testing_folder, "30FPS")
   target_fps_folder = os.path.join(testing_folder, f"{int(target_fps)}FPS")
 
@@ -253,7 +253,7 @@ def ensure_binary_mask_structure(
     Path to the binary masks folder.
   """
   folder_type = "real" if is_real else f"generated/{os.path.basename(input_folder)}"
-  binary_mask_folder = f"./physics-iq-benchmark/video-masks/{folder_type}/{int(target_fps)}FPS"
+  binary_mask_folder = f"./physics-IQ-benchmark/video-masks/{folder_type}/{int(target_fps)}FPS"
 
   if not os.path.exists(binary_mask_folder):
     print(f"Binary masks for {'real' if is_real else 'generated'} videos do not exist. Creating...")
@@ -292,73 +292,62 @@ if __name__ == "__main__":
 
   args = parser.parse_args()
 
-  try:
-    csv_files_folder = os.path.join(args.output_folder, "csv_files")
-    os.makedirs(csv_files_folder, exist_ok=True)
+  csv_files_folder = os.path.join(args.output_folder, "csv_files")
+  os.makedirs(csv_files_folder, exist_ok=True)
 
-    for input_folder in args.input_folders:
-      print(f"\nProcessing folder: {input_folder}")
+  for input_folder in args.input_folders:
+    print(f"\nProcessing folder: {input_folder}")
 
-      validate_directory_exists(input_folder, "Input folder")
-      validate_directory_exists(args.descriptions_file, "Descriptions file")
+    validate_directory_exists(input_folder, "Input folder")
+    validate_directory_exists(args.descriptions_file, "Descriptions file")
 
-      fps = get_video_fps(input_folder)
+    fps = get_video_fps(input_folder)
       
-      # Ensure real videos exist at the target FPS
-      real_video_folder = ensure_real_videos_at_fps(args.output_folder, fps, args.descriptions_file)
+    # Ensure real videos exist at the target FPS
+    real_video_folder = ensure_real_videos_at_fps(args.output_folder, fps, args.descriptions_file)
 
-      # Generate binary masks for real videos
-      expected_real_files = validate_video_files(real_video_folder, args.descriptions_file, 'testing-videos', int(fps), include_take_2=True)
-      expected_real_files = {f.replace("testing-videos", "mask-videos") for f in expected_real_files}
-      binary_mask_real_folder = ensure_binary_mask_structure(
-        output_folder=args.output_folder,
-        input_folder=real_video_folder,
-        target_fps=fps,
-        expected_files=expected_real_files,
-        is_real=True,
+    # Generate binary masks for real videos
+    expected_real_files = validate_video_files(real_video_folder, args.descriptions_file, 'testing-videos', int(fps), include_take_2=True)
+    expected_real_files = {f.replace("testing-videos", "mask-videos") for f in expected_real_files}
+    binary_mask_real_folder = ensure_binary_mask_structure(
+      output_folder=args.output_folder,
+      input_folder=real_video_folder,
+      target_fps=fps,
+      expected_files=expected_real_files,
+      is_real=True,
+    )
+
+    # Generate binary masks for generated videos
+    expected_generated_files = validate_video_files(input_folder, args.descriptions_file, '', int(fps), include_take_2=False)
+    #expected_generated_files = [f.replace("", "video-masks") for f in expected_real_files]
+    binary_mask_generated_folder = ensure_binary_mask_structure(
+      output_folder=args.output_folder,
+      input_folder=input_folder,
+      target_fps=fps,
+      expected_files=expected_generated_files,
+      is_real=False,
+    )
+
+    input_folder_name = os.path.basename(input_folder.rstrip("/"))
+    csv_file_path = os.path.join(csv_files_folder, f"{input_folder_name}.csv")
+    # Check if the CSV is complete
+    # Validate all required real video scenarios
+    expected_real_scenarios = validate_video_files(real_video_folder, args.descriptions_file, 'testing-videos', int(fps), include_take_2=True)
+    # Check if the CSV is complete
+    if is_csv_complete(csv_file_path, expected_real_scenarios):
+      print(f"Skipping calculations for {csv_file_path} as it is already complete.")
+    else:
+
+      process_videos(
+        real_folders=real_video_folder,
+        generated_folders=input_folder,
+        binary_real_folders=binary_mask_real_folder,
+        binary_generated_folders=binary_mask_generated_folder,
+        csv_file_path=csv_file_path,
+        fps=fps,
+        video_time_selection="first",
       )
 
-      # Generate binary masks for generated videos
-      expected_generated_files = validate_video_files(input_folder, args.descriptions_file,'', int(fps), include_take_2=False)
-      #expected_generated_files = [f.replace("", "video-masks") for f in expected_real_files]
-      binary_mask_generated_folder = ensure_binary_mask_structure(
-        output_folder=args.output_folder,
-        input_folder=input_folder,
-        target_fps=fps,
-        expected_files=expected_generated_files,
-        is_real=False,
-      )
+  process_directory(csv_files_folder)
+  print(f"\nMetrics and plots generated in: {csv_files_folder}")
 
-      input_folder_name = os.path.basename(input_folder.rstrip("/"))
-      csv_file_path = os.path.join(csv_files_folder, f"{input_folder_name}.csv")
-      # Check if the CSV is complete
-      # Validate all required real video scenarios
-      expected_real_scenarios = validate_video_files(real_video_folder, args.descriptions_file, 'testing-videos', int(fps), include_take_2=True)
-      # Check if the CSV is complete
-      if is_csv_complete(csv_file_path, expected_real_scenarios):
-          print(f"Skipping calculations for {csv_file_path} as it is already complete.")
-      else:
-
-          process_videos(
-              real_folders=real_video_folder,
-              generated_folders=input_folder,
-              binary_real_folders=binary_mask_real_folder,
-              binary_generated_folders=binary_mask_generated_folder,
-              csv_file_path=csv_file_path,
-              fps=fps,
-              video_time_selection="first",
-          )
-
-
-
-    process_directory(csv_files_folder)
-
-    print(f"\nMetrics and plots generated in: {csv_files_folder}")
-
-  except FileNotFoundError as e:
-    print(f"Error: {e}")
-    sys.exit(1)
-
-  except Exception as e:
-    print(f"Unexpected error: {e}")
-    sys.exit(1)

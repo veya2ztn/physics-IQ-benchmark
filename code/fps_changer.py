@@ -31,7 +31,7 @@ def change_video_fps(input_folder: str, output_folder: str, fps_new: float) -> N
     print(f"Starting FPS change process for target FPS: {fps_new}")
     os.makedirs(output_folder, exist_ok=True)
 
-    video_files = [f for f in os.listdir(input_folder) if f.endswith(".mp4")]
+    video_files = [f for f in sorted(os.listdir(input_folder)) if f.endswith(".mp4")]
 
     if not video_files:
         print(f"No MP4 files found in {input_folder}. Exiting.")

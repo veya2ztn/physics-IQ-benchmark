@@ -142,7 +142,7 @@ def process_directory(directory_path: str) -> None:
   """
   model_scores = {}
   csv_files = [
-    f for f in os.listdir(directory_path) if f.endswith(".csv")
+    f for f in sorted(os.listdir(directory_path)) if f.endswith(".csv")
   ]
 
   for csv_file in csv_files:
