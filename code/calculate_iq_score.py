@@ -116,7 +116,6 @@ def calculate_iq_score(file_path: str) -> tuple[float, float]:
     physical_variance_spatiotemporal - physical_variance_mse
   )
 
-  physical_variance_all_metrics *= scaling_factor
   final_score = (
     (
         (total_sum_iou_v1 / physical_variance_iou) +
