@@ -125,6 +125,11 @@ def calculate_iq_score(file_path: str) -> tuple[float, float]:
   ) - (total_sum_v1_mse - physical_variance_mse)
 
   final_score *= 100
+
+  # Make sure result is within [0, 100]
+  final_score = max(final_score, 0.0)
+  final_score = min(final_score, 100.0)
+
   return round(final_score, 2), physical_variance_all_metrics
 
 
