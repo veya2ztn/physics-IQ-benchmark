@@ -252,7 +252,7 @@ def ensure_binary_mask_structure(
   Returns:
     Path to the binary masks folder.
   """
-  folder_type = "real" if is_real else f"generated/{os.path.basename(input_folder)}"
+  folder_type = "real" if is_real else f"generated/{os.path.basename(os.path.normpath(input_folder))}"
   binary_mask_folder = f"./physics-IQ-benchmark/video-masks/{folder_type}/{int(target_fps)}FPS"
 
   if not os.path.exists(binary_mask_folder):
