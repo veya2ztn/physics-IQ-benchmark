@@ -201,7 +201,7 @@ def process_directory(directory_path: str) -> None:
   ax.spines["top"].set_visible(False)
 
   plt.xlabel("")
-  plt.ylabel("")
+  plt.ylabel("Physics-IQ score\n(higher=better)")
   ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:.0f}%"))
   plt.tight_layout()
   plt.savefig(os.path.join(directory_path, 'physics_IQ_score_barplot.pdf'))
