@@ -17,7 +17,6 @@ import os
 import subprocess
 import multiprocessing
 
-# Ensure 'spawn' is the default start method for multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
 
@@ -29,7 +28,7 @@ def download_directory(remote_path: str, local_path: str):
       local_path: Local path.
     """
     print(f"Syncing {remote_path} → {local_path} using gsutil rsync...")
-    os.makedirs(local_path, exist_ok=True)  # Ensure the directory exists
+    os.makedirs(local_path, exist_ok=True) 
     try:
         subprocess.run(["gsutil", "-m", "rsync", "-r", remote_path, local_path], check=True)
         print(f"Sync complete for {remote_path}.")
