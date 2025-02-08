@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-
 import os
 import subprocess
 import multiprocessing
@@ -22,108 +21,20 @@ import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
 
-def list_remote_files(remote_path: str):
-    """Lists files in the remote GCS path.
-
-    Args:
-      remote_path: Cloud path.
-
-    Returns:
-      A set of file paths relative to remote_path.
-    """
-    try:
-        result = subprocess.run(
-            ["gsutil", "ls", "-r", remote_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-        )
-        remote_files = result.stdout.strip().split("\n")
-
-        # Remove the base path to get relative paths
-        remote_relative_paths = {
-            file.replace(remote_path + "/", "").strip()
-            for file in remote_files
-            if file.startswith(remote_path) and "." in file  # Ensure it's a file, not a folder
-        }
-        return remote_relative_paths
-    except subprocess.CalledProcessError as e:
-        print(f"Error listing remote files for {remote_path}: {e.stderr}")
-        return set()
-
-
-def list_local_files(local_path: str):
-    """Lists files in the local directory with relative paths.
-
-    Args:
-      local_path: Local directory path.
-
-    Returns:
-      A set of file paths relative to local_path.
-    """
-    local_files = set()
-    for root, _, files in os.walk(local_path):
-        for file in files:
-            full_path = os.path.join(root, file)
-            relative_path = os.path.relpath(full_path, local_path)  # Preserve directory structure
-            local_files.add(relative_path)
-    return local_files
-
-
 def download_directory(remote_path: str, local_path: str):
-    """Download missing files from the remote directory using gsutil.
+    """Sync a remote directory with a local directory using gsutil rsync.
 
     Args:
       remote_path: Cloud path.
       local_path: Local path.
     """
-    if not os.path.exists(local_path):
-        print(f"Directory {local_path} does not exist. Creating it and downloading everything using gsutil -m rsync -r...")
-        os.makedirs(local_path, exist_ok=True)  # Ensure the directory exists
-
-        try:
-            subprocess.run(
-                ["gsutil", "-m", "rsync", "-r", remote_path, local_path],  # Use rsync instead of cp -r
-                check=True,
-            )
-            print(f"Downloaded full directory: {remote_path} → {local_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to download: {remote_path} Error: {e}")
-            raise
-        return
-
-    print(f"Checking missing files in {remote_path}...")
-
-    remote_files = list_remote_files(remote_path)
-    local_files = list_local_files(local_path)
-
-    # Ensure we only check for missing files, avoiding directory paths
-    missing_files = {file for file in remote_files if file and file not in local_files and "." in file}
-
-    if not missing_files:
-        print(f"All files already exist in {local_path}, skipping download.")
-        return
-
-    print(f"Downloading {len(missing_files)} missing files to {local_path}...")
-
+    print(f"Syncing {remote_path} → {local_path} using gsutil rsync...")
+    os.makedirs(local_path, exist_ok=True)  # Ensure the directory exists
     try:
-        for missing_file in missing_files:
-            remote_file_path = f"{remote_path}/{missing_file}"
-            local_file_path = os.path.join(local_path, missing_file)
-
-            # Ensure directory structure exists
-            os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-
-            print(f"Downloading {remote_file_path} → {local_file_path}")
-            subprocess.run(
-                ["gsutil", "-m", "cp", remote_file_path, local_file_path],
-                check=True,
-            )
-
-        print(f"Downloaded missing files from {remote_path}.")
+        subprocess.run(["gsutil", "-m", "rsync", "-r", remote_path, local_path], check=True)
+        print(f"Sync complete for {remote_path}.")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to download: {remote_path} Error: {e}")
+        print(f"Failed to sync: {remote_path}. Error: {e}")
         raise
 
 
@@ -141,10 +52,11 @@ def download_physics_iq_data(fps: str):
     else:
         download_fps = [fps]
         if fps != '30':
-            download_fps.append('30')  # Always download 30FPS data
+            # Always download 30FPS data
+            download_fps.append('30')  
 
-    base_url = "gs://physics-iq-benchmark"  # Base GCS URL
-    local_base_dir = "./physics-IQ-benchmark"  # Local base directory
+    base_url = "gs://physics-iq-benchmark" 
+    local_base_dir = "./physics-IQ-benchmark"  
 
     directories = {
         "full-videos/take-1": download_fps,
@@ -172,5 +84,3 @@ def download_physics_iq_data(fps: str):
 if __name__ == '__main__':
     user_fps = input("Enter your model's frames per second FPS (e.g., 8, 16, 24, 30, other): ").strip()
     download_physics_iq_data(user_fps)
-
-
