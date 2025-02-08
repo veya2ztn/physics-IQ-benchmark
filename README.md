@@ -30,6 +30,22 @@ Project website: [physics-iq.github.io](https://physics-iq.github.io/)
 
 ---
 
+## Leaderboard
+The best possible score on Physics-IQ is 100.0%, this score would be achieved by physically realistic videos that differ only in physical randomness but adhere to all tested principles of physics.
+
+| **#** | **Model** | **input type** | **Physics-IQ score** |
+| -- | --- | --- | --- |
+| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **24.1 %** :1st_place_medal: |
+| 2 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 18.4 % :2nd_place_medal: |
+| 3 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 18.2 % :3rd_place_medal: |
+| 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 18.0 % |
+| 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 17.1 % |
+| 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 13.5 % |
+| 7 | [Pika](https://pika.art/)                                              | i2v        |  9.5 % |
+| 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  8.7 % |
+
+---
+
 ## Step A: Generating Videos for Physics-IQ Test Cases Based on Video Model
 
 ### 1. Download Benchmark Dataset
@@ -141,14 +157,6 @@ python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_
 - `--input_folders: The path to the directories containing input videos (in `.mp4` format), with one directory per model (/model_name/video.mp4)
 - `--output_folder`: The path to the directory where output csv files will be saved
 - `--descriptions_file`: The path to the descriptions.csv file
-
----
-
-## Leaderboard
-
-<p align="center">
-  <img src="assets/physics_IQ_score.png" width="75%" alt="Comparison of metrics for different models">
-</p>
 
 ---
 
