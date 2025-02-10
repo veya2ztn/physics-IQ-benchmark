@@ -46,14 +46,13 @@ def download_physics_iq_data(fps: str):
     valid_fps = ['8', '16', '24', '30', 'other']
     assert fps in valid_fps, 'FPS needs to be in [8, 16, 24, 30, other]'
 
-    if fps == 'other':
-        download_fps = ['30']
-    else:
-        download_fps = [fps]
-        if fps != '30':
-            # Always download 30FPS data
-            download_fps.append('30')  
+    # Always download 30FPS data
+    download_fps = ['30']
 
+    # Additionally download available non-30 FPS data if necessary
+    if fps in ['8', '16', '24']:
+        download_fps.append(fps)
+        
     base_url = "gs://physics-iq-benchmark" 
     local_base_dir = "./physics-IQ-benchmark"  
 
