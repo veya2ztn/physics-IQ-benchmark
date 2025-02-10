@@ -74,7 +74,7 @@ def rename_generated_videos(generated_video_directory: str, real_video_directory
     name_mapping[realfile[:prefix_length]] = "_".join([
           parts[0],  # Keep the first part (e.g., 0092)
           parts[3],  # Keep the perspective (e.g., perspective-center)
-          parts[5]   # Keep the trimmed-lit-candle (e.g., trimmed-lit-candle.mp4)
+          parts[5]   # Keep the scenario name (e.g., trimmed-lit-candle.mp4)
       ])
 
   for genfile in sorted(os.listdir(generated_video_directory)):
