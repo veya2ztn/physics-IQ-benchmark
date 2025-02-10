@@ -13,33 +13,27 @@
 # limitations under the License.
 # ==============================================================================
 
-
 import os
 import subprocess
 import multiprocessing
 
-# Ensure 'spawn' is the default start method for multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
 
 def download_directory(remote_path: str, local_path: str):
-    """Download a single directory using gsutil.
+    """Sync a remote directory with a local directory using gsutil rsync.
 
     Args:
-      remote_path: Cloud path
-      local_path: Local path
+      remote_path: Cloud path.
+      local_path: Local path.
     """
-    os.makedirs(local_path, exist_ok=True)
-    print(f"Preparing to download: {remote_path} to {local_path}")
-
+    print(f"Syncing {remote_path} → {local_path} using gsutil rsync...")
+    os.makedirs(local_path, exist_ok=True) 
     try:
-        # Limit parallel downloads to avoid freezing
-        subprocess.run(
-            ["gsutil", "-m", "-o", "GSUtil:parallel_process_count=5", "cp", "-r", remote_path + "/*", local_path], check=True
-        )
-        print(f"Downloaded: {remote_path}")
+        subprocess.run(["gsutil", "-m", "rsync", "-r", remote_path, local_path], check=True)
+        print(f"Sync complete for {remote_path}.")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to download: {remote_path} Error: {e}")
+        print(f"Failed to sync: {remote_path}. Error: {e}")
         raise
 
 
@@ -52,16 +46,15 @@ def download_physics_iq_data(fps: str):
     valid_fps = ['8', '16', '24', '30', 'other']
     assert fps in valid_fps, 'FPS needs to be in [8, 16, 24, 30, other]'
 
-    
-    if fps == 'other':
-        download_fps = ['30']
-    else:
-        download_fps = [fps]
-        if fps != '30':
-            download_fps.append('30')  # Always download 30FPS data
+    # Always download 30FPS data
+    download_fps = ['30']
 
-    base_url = "gs://physics-iq-benchmark"  # Base GCS URL
-    local_base_dir = "./physics-IQ-benchmark"  # Local base directory
+    # Additionally download available non-30 FPS data if necessary
+    if fps in ['8', '16', '24']:
+        download_fps.append(fps)
+        
+    base_url = "gs://physics-iq-benchmark" 
+    local_base_dir = "./physics-IQ-benchmark"  
 
     directories = {
         "full-videos/take-1": download_fps,
@@ -78,7 +71,6 @@ def download_physics_iq_data(fps: str):
                 remote_path = f"{base_url}/{directory}/{fps_option}FPS"
                 local_path = os.path.join(local_base_dir, directory, f"{fps_option}FPS")
                 download_directory(remote_path=remote_path, local_path=local_path)
-
         else:
             remote_path = f"{base_url}/{directory}"
             local_path = os.path.join(local_base_dir, directory)
