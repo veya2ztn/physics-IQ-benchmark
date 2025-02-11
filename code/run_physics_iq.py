@@ -18,6 +18,8 @@ import sys
 import pandas as pd
 import cv2
 import argparse
+import subprocess
+import math
 
 from fps_changer import change_video_fps
 from calculate_and_write_metrics_to_csv import process_videos
@@ -44,7 +46,6 @@ def is_csv_complete(csv_file_path: str, expected_scenarios: set[str]) -> bool:
 
     # Extract base scenario names from descriptions (strip `perspective-center_take-1`, `perspective-left_take-1`)
     base_expected_scenarios = {scenario.split("_")[-1] for scenario in expected_scenarios}
-    # Extract scenario names from the calculated CSV file
     csv_scenarios = set(df["scenario"])
 
     # Check for missing scenarios
@@ -131,8 +132,18 @@ def validate_folder_files_exist(
   print(f"{description} folder is valid with all required files.")
 
 
+def get_video_duration(video_path):
+    """Return the duration of a video in seconds using ffprobe."""
+    result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    return float(result.stdout)
+
+
 def validate_generations(input_folder: str):
-  """Check that 198 videos exist, each with an ID prefix from 0001_ to 0198_."""
+  """Check that 198 videos exist, each 5 seconds with an ID prefix from 0001_ to 0198_."""
 
   assert os.path.exists(input_folder)
   assert os.path.isdir(input_folder)
@@ -140,6 +151,8 @@ def validate_generations(input_folder: str):
   files_in_folder = sorted(os.listdir(input_folder))
 
   EXPECTED_NUM_VIDEOS = 198 # number of generated videos that need to be evaluated
+  EXPECTED_VIDEO_DURATION = 5
+
   length_error_msg = f"found {len(files_in_folder)} videos but expected {EXPECTED_NUM_VIDEOS}"
   assert len(files_in_folder) == EXPECTED_NUM_VIDEOS, length_error_msg
 
@@ -147,6 +160,13 @@ def validate_generations(input_folder: str):
   for f in files_in_folder:
     expected_prefix = "{:04d}_".format(counter)
     assert f.startswith(expected_prefix), "Video {f} does not start with expected video ID {expected_prefix}"
+
+    video_path = os.path.join(input_folder, f)
+    video_duration = get_video_duration(video_path)
+
+    duration_error_msg = f"Video {video_path} is {video_duration} seconds long but needs to be 5s. " + \
+            "Please ensure that all generated videos are exactly 5 seconds long."
+    assert math.isclose(video_duration, EXPECTED_VIDEO_DURATION, abs_tol=0.001), duration_error_msg
     counter += 1
 
 
