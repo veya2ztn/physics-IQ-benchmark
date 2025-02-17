@@ -148,8 +148,8 @@ def validate_generations(input_folder: str):
   assert os.path.exists(input_folder)
   assert os.path.isdir(input_folder)
 
-  files_in_folder = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
 
+  files_in_folder = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
 
   EXPECTED_NUM_VIDEOS = 198 # number of generated videos that need to be evaluated
   EXPECTED_VIDEO_DURATION = 5 # required duration in seconds for generated videos
@@ -427,4 +427,5 @@ if __name__ == "__main__":
 
   process_directory(csv_files_folder)
   print(f"\nCheck out {csv_files_folder} for saved plots and metrics.")
+
   print("Thank you for using the Physics-IQ benchmark!")

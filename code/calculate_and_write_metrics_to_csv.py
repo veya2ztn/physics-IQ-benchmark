@@ -28,6 +28,7 @@ import tqdm
 import gc
 
 
+
 def get_video_frame_count(filepath):
   """Get the total number of frames in a video."""
   if not os.path.exists(filepath):
@@ -195,7 +196,9 @@ def process_videos(
     Returns:
       A dictionary of calculated metrics.
     """
-    print('-- Processing scenario: ', scenario_name + ' -- view: ' + view)
+
+    print(f'## Processing scenario: {scenario_name} with perspective: {view}')
+
     real_path_v1 = os.path.join(real_folders, f'{scenario_ID_take_1}_testing-videos_{fps}FPS_{view}_take-1_{scenario_name}')
     generated_path = os.path.join(
         generated_folders, f'{scenario_ID_take_1}_{view}_{scenario_name}'
@@ -332,8 +335,6 @@ def process_videos(
     else:
         variance_weighted_spatial = np.sum(intersection) / np.sum(union)
 
-
-    
     variance_spatial = spatiotemporal_iou_per_frame(
         [spatial_v1], [spatial_v2]
     )  
@@ -437,117 +438,3 @@ def process_videos(
       df.to_csv(csv_file_path, index=False)
   else:
       print('No data to write to CSV')
-
-
-
-
-
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Process videos and plot MSE.')
-  parser.add_argument(
-      '--real_folder',
-      type=str,
-      nargs='+',
-      help='Paths to the folders containing real videos.',
-  )
-  parser.add_argument(
-      '--generated_folder',
-      type=str,
-      nargs='+',
-      help='Paths to the folders containing generated videos.',
-  )
-  parser.add_argument(
-      '--binary_real_folder',
-      type=str,
-      nargs='+',
-      help='Paths to the folders containing binary real videos.',
-  )
-  parser.add_argument(
-      '--binary_generated_folders',
-      type=str,
-      nargs='+',
-      help='Paths to the folders containing binary generated videos.',
-  )
-  parser.add_argument(
-      '--csv_files',
-      type=str,
-      nargs='+',
-      help='Paths to the CSV files containing scenarios and MSE values.',
-  )
-  parser.add_argument(
-      '--fps',
-      type=float,
-      nargs='+',
-      required=True,
-      help='FPS for each CSV file. Must match the number of CSV files.',
-  )
-  parser.add_argument(
-      '--video_time',
-      type=str,
-      nargs='+',
-      choices=['first', 'last'],
-      default=['last'],
-      help=(
-          'Choose whether to pick the first or last 5 seconds '
-          'of the video. Must match the number of CSV files.'
-      ),
-  )
-
-  args = parser.parse_args()
-  print(args.real_folder, args.generated_folder)
-  if len(args.real_folder) != len(args.generated_folder):
-    raise ValueError(
-        'The number of real folders must match the number of generated folders.'
-    )
-  if len(args.real_folder) != len(args.csv_files):
-    raise ValueError(
-        'The number of real folders must match the number of CSV files.'
-    )
-  if len(args.real_folder) != len(args.fps):
-    raise ValueError(
-        'The number of real folders must match the number of FPS values.'
-    )
-  if len(args.video_time) != len(args.csv_files):
-    raise ValueError(
-        'The number of video time options must match the number of CSV files.'
-    )
-
-  # Process the videos and update the CSV files
-  for (
-      real_folder,
-      generated_folder,
-      binary_real_folder,
-      binary_generated_folder,
-      csv_file,
-      fps,
-      video_time,
-  ) in zip(
-      args.real_folder,
-      args.generated_folder,
-      args.binary_real_folder,
-      args.binary_generated_folders,
-      args.csv_files,
-      args.fps,
-      args.video_time,
-  ):
-    print(
-        f"Processing {csv_file} with FPS {fps}, video time '{video_time}' using"
-        f" real folder '{real_folder}' and generated folder"
-        f" '{generated_folder}'."
-    )
-
-    csv_data = pd.read_csv(csv_file)
-
-
-    # Proceed with processing if the row count is correct
-    process_videos(
-        real_folder,
-        generated_folder,
-        binary_real_folder,
-        binary_generated_folder,
-        csv_file,
-        fps,
-        video_time,
-    )
-
-  # Plot MSE values
