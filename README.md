@@ -35,14 +35,14 @@ The best possible score on Physics-IQ is 100.0%, this score would be achieved by
 
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
-| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **24.1 %** :1st_place_medal: |
-| 2 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 18.4 % :2nd_place_medal: |
-| 3 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 18.2 % :3rd_place_medal: |
-| 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 18.0 % |
-| 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 17.1 % |
-| 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 13.5 % |
-| 7 | [Pika](https://pika.art/)                                              | i2v        |  9.5 % |
-| 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  8.7 % |
+| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **29.5 %** :1st_place_medal: |
+| 3 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 23.0 % :2nd_place_medal: |
+| 2 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
+| 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 20.3 % |
+| 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 19.0 % |
+| 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 14.8 % |
+| 7 | [Pika](https://pika.art/)                                              | i2v        |  13.0 % |
+| 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  10.0 % |
 
 ---
 
@@ -58,7 +58,7 @@ python3 ./code/download_physics_iq_data.py
 ```
 
 - If your desired FPS already exists in the dataset, it will be downloaded.
-- If it does not exist, the script will download 30 FPS files and generate your desired FPS videos based on the 30 FPS version.
+- If it does not exist, the script will download 30 FPS files and generate your desired FPS videos by downsampling the 30 FPS version.
 
 ---
 
@@ -74,9 +74,9 @@ This section explains how to generate videos using the provided benchmark and sa
 
 2. **Steps to Run**:
    - Generate videos using the initial frame (and text condition, if applicable).
-   - Save generated videos in the following structure:
+   - Save generated videos in the following structure, using any filename as long as the unique ID prefix from the test videos is kept (`0001_`, ..., `0198_`):
      ```
-     .model_name/{ID}_{perspective}_{scenario_name}.mp4
+     .model_name/{ID}_{anything-you-like}.mp4
      ```
    - Refer to the `generated_video_name` column in `descriptions.csv` for file naming conventions.
 
@@ -160,6 +160,14 @@ python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_
 
 ---
 
+## Leaderboard
+
+<p align="center">
+  <img src="assets/physics_IQ_score.png" width="75%" alt="Comparison of metrics for different models">
+</p>
+
+---
+
 ## Citation
 
 ```latex
@@ -192,4 +200,3 @@ either express or implied. See the licenses for the specific language governing
 permissions and limitations under those licenses.
 
 This is not an official Google product.
-
