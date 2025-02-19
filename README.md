@@ -35,14 +35,14 @@ The best possible score on Physics-IQ is 100.0%, this score would be achieved by
 
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
-| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **24.1 %** :1st_place_medal: |
-| 2 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 18.4 % :2nd_place_medal: |
-| 3 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 18.2 % :3rd_place_medal: |
-| 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 18.0 % |
-| 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 17.1 % |
-| 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 13.5 % |
-| 7 | [Pika](https://pika.art/)                                              | i2v        |  9.5 % |
-| 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  8.7 % |
+| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **29.5 %** :1st_place_medal: |
+| 2 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 23.0 % :2nd_place_medal: |
+| 3 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
+| 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 20.3 % |
+| 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 19.0 % |
+| 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 14.8 % |
+| 7 | [Pika](https://pika.art/)                                              | i2v        |  13.0 % |
+| 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  10.0 % |
 
 ---
 
@@ -160,6 +160,7 @@ python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_
 
 ---
 
+
 ## Citation
 
 ```latex
@@ -192,4 +193,3 @@ either express or implied. See the licenses for the specific language governing
 permissions and limitations under those licenses.
 
 This is not an official Google product.
-

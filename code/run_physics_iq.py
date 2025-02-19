@@ -148,7 +148,8 @@ def validate_generations(input_folder: str):
   assert os.path.exists(input_folder)
   assert os.path.isdir(input_folder)
 
-  files_in_folder = sorted(os.listdir(input_folder))
+
+  files_in_folder = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
 
   EXPECTED_NUM_VIDEOS = 198 # number of generated videos that need to be evaluated
   EXPECTED_VIDEO_DURATION = 5 # required duration in seconds for generated videos
@@ -333,7 +334,7 @@ def ensure_binary_mask_structure(
   if not os.path.exists(binary_mask_folder):
     print(f"Binary masks for {'real' if is_real else 'generated'} videos do not exist. Creating...")
     os.makedirs(binary_mask_folder, exist_ok=True)
-    generate_binary_masks(input_folder, binary_mask_folder)
+    generate_binary_masks(input_folder, binary_mask_folder, is_real)
 
   validate_folder_files_exist(
     binary_mask_folder, expected_files, f"Binary masks for {'real' if is_real else 'generated'} videos at FPS {int(target_fps)}"
@@ -426,5 +427,5 @@ if __name__ == "__main__":
 
   process_directory(csv_files_folder)
   print(f"\nCheck out {csv_files_folder} for saved plots and metrics.")
-  print("Thank you for using the Physics-IQ benchmark!")
 
+  print("Thank you for using the Physics-IQ benchmark!")

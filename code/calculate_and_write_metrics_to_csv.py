@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tqdm
+import gc
+
 
 
 def get_video_frame_count(filepath):
@@ -75,6 +77,7 @@ def process_videos(
 
   def spatial_binary_masks(mask_frames):
     """Collapse the time dimension of binary masks into a single frame."""
+
     if not mask_frames:
       print(
           'Warning: Received empty mask_frames for spatial binary mask '
@@ -86,33 +89,32 @@ def process_videos(
     spatial_mask = np.max(mask_frames, axis=0)
     return (spatial_mask > 0).astype(np.uint8) * 255
 
-  def spatiotemporal_binary_mask(mask_frames):
-    """Calculate an spatiotemporal presence map by counting the number of frames with activity."""
-    spatiotemporal_mask = np.sum(mask_frames, axis=0)
-    # Keep the count of active frames as pixel values
-    return spatiotemporal_mask.astype(np.uint8)
+  def weighted_spatial_mask(mask_frames):
+    """return weighted spatial masks"""
 
-  scenario_data = []
-  processed_scenarios = set()
-  gen_video_duration_frames = get_video_frame_count(
-      os.path.join(generated_folders, sorted(os.listdir(generated_folders))[0])
-  )
+    #normalize the values to [0,1]
+    weighted_spatial_mask = np.sum(mask_frames, axis=0, dtype=np.uint16) / len(mask_frames)
+    return weighted_spatial_mask
+
 
   def mse_per_frame(video1, video2):
-    """Calculate MSE per frame for two videos.
-
-    Args:
-      video1:
-      video2:
-
-    Returns:
-
-    """
+    """Calculate MSE per frame for two videos."""
+    
+    # Ensure both videos have the same number of frames and frame dimensions
+    if len(video1) != len(video2):
+        raise ValueError("Videos must have the same number of frames.")
+    
     frame_mses = []
     for frame1, frame2 in zip(video1, video2):
-      mse = np.mean((frame1.flatten() - frame2.flatten()) ** 2)
-      frame_mses.append(mse)
+        if frame1.shape != frame2.shape:
+            raise ValueError("Frames must have the same dimensions.")
+        
+        # Calculate MSE for this frame
+        mse = np.mean((frame1.astype(np.float32) - frame2.astype(np.float32)) ** 2)
+        frame_mses.append(mse)
+    
     return frame_mses
+
 
   def load_and_resize_video(
       filepath, start_frame, end_frame, target_size=None, normalize=True
@@ -147,19 +149,38 @@ def process_videos(
       frame_idx += 1
     cap.release()
     return frames
+  
 
-  def iou_per_frame(mask1, mask2):
-    """Calculate Intersection over Union (IoU) per frame for two binary masks."""
-    iou_values = []
+  def compute_weighted_spatial_iou(weighted_spatial_1, weighted_spatial_2):
+    """Compute iou between two weighted spatial masks."""
+
+    # Compute intersection and union
+    intersection = np.minimum(weighted_spatial_1, weighted_spatial_2)
+    union = np.maximum(weighted_spatial_1, weighted_spatial_2)
+    
+    # Pixels where motion exists in at least one
+    valid_pixels = union > 0
+    
+    # If no valid pixels, return IOU of 1.0 (perfect match)
+    if np.sum(valid_pixels) == 0:
+        return 1.0
+    # Compute the IOU only for valid pixels
+    return np.sum(intersection[valid_pixels]) / np.sum(union[valid_pixels])
+
+
+  def spatiotemporal_iou_per_frame(mask1, mask2):
+    """Calculate Intersection over Union (spatiotemporal_iou) per frame for two binary masks."""
+    spatiotemporal_iou_values = []
     for m1, m2 in zip(mask1, mask2):
         intersection = np.logical_and(m1, m2).sum()
         union = np.logical_or(m1, m2).sum()
         if union == 0:
-            iou = 1.0  # Both masks are empty
+            spatiotemporal_iou = 1.0  # Both masks are empty
         else:
-            iou = intersection / union
-        iou_values.append(iou)
-    return iou_values
+            spatiotemporal_iou = intersection / union
+        spatiotemporal_iou_values.append(spatiotemporal_iou)
+    return spatiotemporal_iou_values
+
 
   scenario_data = []
   processed_scenarios = set()
@@ -200,7 +221,8 @@ def process_videos(
     Returns:
       A dictionary of calculated metrics.
     """
-    print('## Processing scenario ', scenario_name)
+
+    print('-- Processing scenario: ', scenario_name + ' -- view: ' + view)
     real_path_v1 = os.path.join(real_folders, f'{scenario_ID_take_1}_testing-videos_{fps}FPS_{view}_take-1_{scenario_name}')
     generated_path = os.path.join(
         generated_folders, f'{scenario_ID_take_1}_{view}_{scenario_name}'
@@ -244,15 +266,15 @@ def process_videos(
     )
     binary_v1_frames = load_and_resize_video(
         binary_path_v1,
-        3 * fps,
-        8 * fps,
+        0,
+        consider_frames,
         target_size,
         normalize=False,
     )
     binary_v2_frames = load_and_resize_video(
         binary_path_v2,
-        3 * fps,
-        8 * fps,
+        0,
+        consider_frames,
         target_size,
         normalize=False,
     )
@@ -263,16 +285,11 @@ def process_videos(
         target_size,
         normalize=False,
     )
-    # Ensure binary masks are binary (0 or 1 pixel values)
-    binary_v1_frames = [
-        (mask > 127).astype(np.uint8) * 255 for mask in binary_v1_frames
-    ]
-    binary_v2_frames = [
-        (mask > 127).astype(np.uint8) * 255 for mask in binary_v2_frames
-    ]
-    binary_generated_frames = [
-        (mask > 127).astype(np.uint8) * 255 for mask in binary_generated_frames
-    ]
+    # Ensure masks are binary (0 or 1 pixel values)
+    binary_v1_frames = [(mask > 127).astype(np.uint8) for mask in binary_v1_frames]
+    binary_v2_frames = [(mask > 127).astype(np.uint8) for mask in binary_v2_frames]
+    binary_generated_frames = [(mask > 127).astype(np.uint8) for mask in binary_generated_frames]
+
 
     # Check if frames are loaded properly
     if (
@@ -284,115 +301,78 @@ def process_videos(
     ):
       raise ValueError(f"Scenario {scenario_name}_{view} has missing frames.")
 
-    # Create subdirectories for each model in spatial and spatiotemporal maps
-    # folders
-    model_name = generated_folders.split('/')[-1]
+
+    # Calculate spatiotemporal_iou for v1 and v2 masks
+    spatiotemporal_iou_v1 = spatiotemporal_iou_per_frame(binary_v1_frames, binary_generated_frames)
+    spatiotemporal_iou_v2 = spatiotemporal_iou_per_frame(binary_v2_frames, binary_generated_frames)
 
 
-    # Calculate IOU for v1 and v2 masks
-    iou_v1 = iou_per_frame(binary_v1_frames, binary_generated_frames)
-    iou_v2 = iou_per_frame(binary_v2_frames, binary_generated_frames)
-
-    # Collapse binary masks over time to calculate spatial IOU
+    # Collapse binary masks over time to calculate spatial iou
     spatial_v1 = spatial_binary_masks(binary_v1_frames)
     spatial_v2 = spatial_binary_masks(binary_v2_frames)
 
-    # Calculate spatial IOU for v1 and v2
+
+    # Calculate spatial_iou for v1 and v2
     spatial_generated = spatial_binary_masks(binary_generated_frames)
-
-    iou_v1_spatial = iou_per_frame([spatial_v1], [spatial_generated])[0]
-    iou_v2_spatial = iou_per_frame([spatial_v2], [spatial_generated])[0]
-
-    # Calculate spatial IOU
-    spatial_iou = iou_per_frame([spatial_v1], [spatial_v2])[0]  # Calculate IOU between collapsed spatial masks
+    iou_v1_spatial = spatiotemporal_iou_per_frame([spatial_v1], [spatial_generated])[0]
+    iou_v2_spatial = spatiotemporal_iou_per_frame([spatial_v2], [spatial_generated])[0]
 
 
-    # Calculate spatiotemporal presence IOU for v1 and v2 masks
-    spatiotemporal_v1 = spatiotemporal_binary_mask(binary_v1_frames)
-    spatiotemporal_v2 = spatiotemporal_binary_mask(binary_v2_frames)
+    # Calculate the weighted spatial iou masks
+    weighted_spatial_v1 = weighted_spatial_mask(binary_v1_frames)
+    weighted_spatial_v2 = weighted_spatial_mask(binary_v2_frames)
+    weighted_spatial_generated = weighted_spatial_mask(binary_generated_frames) 
 
-    # Calculate spatiotemporal IOU
-    max_spatiotemporal_v1 = np.sum(
-        np.maximum(spatiotemporal_v1, binary_generated_frames)
-    )
-    if max_spatiotemporal_v1 != 0:
-      iou_v1_spatiotemporal = np.sum(
-          np.minimum(spatiotemporal_v1, binary_generated_frames)
-      ) / max_spatiotemporal_v1
+
+    # Compute weighted spatial iou for v1 and v2 
+    iou_v1_weighted_spatial = compute_weighted_spatial_iou(weighted_spatial_v1, weighted_spatial_generated)
+    iou_v2_weighted_spatial = compute_weighted_spatial_iou(weighted_spatial_v2, weighted_spatial_generated)
+
+
+    # Compute weighted_spatial variance
+    intersection = np.minimum(weighted_spatial_v1, weighted_spatial_v2)
+    union = np.maximum(weighted_spatial_v1, weighted_spatial_v2)
+
+    # If both masks are empty, variance should also be 1
+    if np.sum(union) == 0:
+        variance_weighted_spatial = 1.0
     else:
-      iou_v1_spatiotemporal = 0
-    max_spatiotemporal_v2 = np.sum(
-        np.maximum(spatiotemporal_v2, binary_generated_frames)
-    )
-    if max_spatiotemporal_v2 != 0:
-      iou_v2_spatiotemporal = np.sum(
-          np.minimum(spatiotemporal_v2, binary_generated_frames)
-      ) / max_spatiotemporal_v2
-    else:
-      iou_v2_spatiotemporal = 0
-    # Check for empty spatiotemporal masks
-    if spatiotemporal_v1.size == 0 or spatiotemporal_v2.size == 0:
-      print(f'Empty spatiotemporal masks for scenario {scenario_name}_{view}')
-      return None
-    # Calculate variance for spatial and spatiotemporal IOUs
-    variance_spatial = iou_per_frame(
+        variance_weighted_spatial = np.sum(intersection) / np.sum(union)
+
+
+    variance_spatial = spatiotemporal_iou_per_frame(
         [spatial_v1], [spatial_v2]
-    )  # Calculate per-frame spatial IOU between v1 and v2 masks
-    spatiotemporal_v1_max = np.sum(
-        np.maximum(spatiotemporal_v1, spatiotemporal_v2)
-    )
-    if spatiotemporal_v1_max != 0:
-      variance_spatiotemporal = np.sum(
-          np.minimum(spatiotemporal_v1, spatiotemporal_v2)
-      ) / spatiotemporal_v1_max
-    else:
-      variance_spatiotemporal = 0
-    # Calculate variance IOU
-    variance_iou = iou_per_frame(
+    )  
+    # Calculate physical variance of spatiotemporal iou
+    variance_spatiotemporal_iou = spatiotemporal_iou_per_frame(
         binary_v1_frames, binary_v2_frames
-    )  # Calculate per-frame IOU between v1 and v2 masks
+    )  # Calculate per-frame spatiotemporal iou between v1 and v2 masks
 
-    # Calculate variance MSE
+    # Calculate physical variance MSE
     variance_mse = mse_per_frame(
         real_v1_frames, real_v2_frames
     )  # Calculate MSE between v1 and v2 frames
-    # Print average variances for this scenario
-    #print(f"Average Variances for Scenario '{scenario_name}_{view}':")
-    #print(f' - Variance Spatial: {np.mean(variance_spatial):.4f}')
-    #print(f' - Variance Spatiotemporal: {variance_spatiotemporal:.4f}')
-    #print(f' - Variance IOU: {np.mean(variance_iou):.4f}')
-    #print(f' - Variance MSE: {np.mean(variance_mse):.4f}')
 
     # Return the result for this view
-    return {
-        f'v1_mse_{view}': mse_per_frame(real_v1_frames, generated_frames),
-        f'v2_mse_{view}': mse_per_frame(real_v2_frames, generated_frames),
-        f'spatial_iou_{view}': spatial_iou,  # Spatial IOU
-        f'variance_spatial_{view}': np.mean(
-            variance_spatial
-        ),  # Variance for spatial IOU
-        f'variance_spatiotemporal_{view}': (
-            variance_spatiotemporal
-        ),  # Variance for spatiotemporal IOU
-        f'variance_iou_{view}': variance_iou,  # Variance IOU metric
-        f'variance_mse_{view}': variance_mse,  # Variance MSE metric
-        f'upper_bound_{view}': mse_per_frame(
-            real_v1_frames,
-            real_v2_frames,
-        ),
-        f'iou_v1_{view}': iou_v1,  # IOU for v1
-        f'iou_v2_{view}': iou_v2,  # IOU for v2
-        'spatial_iou_v1': iou_v1_spatial,  # Spatial IOU for v1
-        'spatial_iou_v2': iou_v2_spatial,  # Spatial IOU for v2
-        'spatiotemporal_iou_v1': (
-            iou_v1_spatiotemporal
-        ),  # Spatiotemporal IOU for v1
-        'spatiotemporal_iou_v2': (
-            iou_v2_spatiotemporal
-        ),  # Spatiotemporal IOU for v2
+    out = {
+      f'v1_mse_{view}': mse_per_frame(real_v1_frames, generated_frames),
+      f'v2_mse_{view}': mse_per_frame(real_v2_frames, generated_frames),
+      f'variance_spatial_{view}': np.mean(variance_spatial),  # Variance for spatial iou per view
+      f'variance_weighted_spatial_{view}': variance_weighted_spatial,  # Variance for weighted_spatial iou per view
+      f'variance_spatiotemporal_iou_{view}': variance_spatiotemporal_iou,  # Variance spatiotemporal_iou metric per view
+      f'variance_mse_{view}': variance_mse,  # Variance MSE metric per view
+      f'spatiotemporal_iou_v1_{view}': spatiotemporal_iou_v1,  # spatiotemporal_iou for v1 per view
+      f'spatiotemporal_iou_v2_{view}': spatiotemporal_iou_v2,  # spatiotemporal_iou for v2 per view
+      f'spatial_iou_v1_{view}': iou_v1_spatial,  # Spatial iou for v1 per view
+      f'spatial_iou_v2_{view}': iou_v2_spatial,  # Spatial iou for v2 per view
+      f'weighted_spatial_iou_v1_{view}': iou_v1_weighted_spatial,  # weighted_spatial for v1 per view
+      f'weighted_spatial_iou_v2_{view}': iou_v2_weighted_spatial,  # weighted_spatial for v2 per view
     }
+
+    del real_v1_frames, real_v2_frames, generated_frames
+    gc.collect()
+    return out
   # Iterate over all scenarios
-  # Dictionary to track processed scenarios and their IDs
   scenario_info = {}
   processed_scenarios = set()
   scenario_data = []
@@ -440,7 +420,7 @@ def process_videos(
       scenario_result = {'scenario': scenario_name}
 
       # Process each view in parallel
-      with pool.ThreadPool() as executor:
+      with pool.ThreadPool(processes=1) as executor:
           futures = [
               executor.apply_async(process_view, 
                                   (scenario_name, view, take_1_views[view], take_2_views[view], int(fps)))
@@ -574,7 +554,3 @@ if __name__ == '__main__':
         fps,
         video_time,
     )
-
-  # Plot MSE values
-  plot_metrics(args.csv_files, './plots', args.fps)
-

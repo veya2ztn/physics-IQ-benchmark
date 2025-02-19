@@ -19,9 +19,8 @@ import os
 import cv2
 import numpy as np
 
-
 def generate_mask(
-    in_path: str, out_video_path: str, threshold_value: int = 10
+    in_path: str, out_video_path: str, is_real: bool, threshold_value: int = 10
 ) -> None:
     """
     Processes a video to generate a binary mask for ROI detection.
@@ -29,15 +28,17 @@ def generate_mask(
     Args:
         in_path: Path to the input video file.
         out_video_path: Path to save the generated binary mask video.
+        is_real: Boolean indicating whether the video is real.
         threshold_value: Threshold value for binary segmentation.
     """
+
     try:
         cap = cv2.VideoCapture(in_path)
         if not cap.isOpened():
             print(f"Error: Could not open video file {in_path}")
             return
 
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        fps = round(cap.get(cv2.CAP_PROP_FPS))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         input_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -46,39 +47,45 @@ def generate_mask(
         width, height = width - width % 2, height - height % 2
 
         # Use H.264 codec for better compatibility
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         name_parts = out_video_path.split('/')
         name_parts_last = name_parts[-1].split('_')
-
-        # Construct the new last part
-        replace_last_part = (
-            name_parts_last[0] + '_video-masks_' + f'{int(fps)}FPS_' + name_parts_last[1] + '_take-1_'+ name_parts_last[2]
-        )
-
-        # Replace the last part in the list
+        
+        #Account for name difference between real and generated videos and save the mask accordingly
+        if is_real:
+            replace_last_part = (
+                name_parts_last[0] + '_video-masks_' + f'{int(fps)}FPS_' + name_parts_last[3] + '_' + name_parts_last[4] + '_'+ name_parts_last[5]
+            )
+        else:
+            replace_last_part = (
+                name_parts_last[0] + '_video-masks_' + f'{int(fps)}FPS_' + name_parts_last[1] + '_take-1_'+ name_parts_last[2]
+            )
+        
         name_parts[-1] = replace_last_part
-
-        # Reconstruct the full path
         out_video_path = '/'.join(name_parts)
+        
         out = cv2.VideoWriter(
             out_video_path, fourcc, fps, (width, height), isColor=False
         )
-
+        
+        # Read and initialize background model with first real frame
         ret, prev_frame = cap.read()
         if not ret:
             print(f"Error: Could not read the first frame from {in_path}")
             return
 
-        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-        prev_gray = cv2.GaussianBlur(prev_gray, (5, 5), 0)
+        # Process the first frame immediately
+        gray_frame = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+        gray_frame = cv2.GaussianBlur(gray_frame, (5, 5), 0)
+        avg_frame = gray_frame.astype("float")
 
-        avg_frame = prev_gray.astype("float")
-        black_frame = np.zeros((height, width), dtype=np.uint8)
-        out.write(black_frame)
-        generated_frame_count = 1
+        # Write the first frame's mask
+        first_mask = np.zeros_like(gray_frame, dtype=np.uint8)
+        out.write(first_mask)
+        generated_frame_count = 1  # Account for the first written frame
 
         kernel = np.ones((5, 5), np.uint8)
-
+        
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -98,8 +105,6 @@ def generate_mask(
 
             binary_frame = cv2.morphologyEx(binary_frame, cv2.MORPH_OPEN, kernel)
             binary_frame = cv2.morphologyEx(binary_frame, cv2.MORPH_CLOSE, kernel)
-
-            # Write the processed frame
             out.write(binary_frame)
             generated_frame_count += 1
 
@@ -107,15 +112,17 @@ def generate_mask(
         out.release()
         print(f"Processed video saved at {out_video_path}")
         print(f"Input video frame count: {input_frame_count}")
-        print(f"Number of generated frames: {generated_frame_count}")
+        print(f"Number of generated mask frames: {generated_frame_count}")
 
     except cv2.error as e:
         print(f"Error processing video {in_path}: {e}")
 
 
+
 def generate_binary_masks(
     input_parent_directory: str,
     output_parent_directory: str,
+    is_real: bool,
     threshold_value: int = 10,
 ) -> None:
     """
@@ -124,8 +131,10 @@ def generate_binary_masks(
     Args:
         input_parent_directory: Path to the parent directory containing input videos.
         output_parent_directory: Path to the parent directory for saving output videos.
+        is_real: Boolean indicating whether the video is real.
         threshold_value: Threshold value for binary segmentation.
     """
+
     if not os.path.exists(output_parent_directory):
         os.makedirs(output_parent_directory)
 
@@ -139,7 +148,7 @@ def generate_binary_masks(
                 input_path = os.path.join(root, filename)
                 output_video_path = os.path.join(output_directory, filename)
                 print(f"Generating mask for: {filename}")
-                generate_mask(input_path, output_video_path, threshold_value)
+                generate_mask(input_path, output_video_path, is_real, threshold_value)
 
 
 if __name__ == "__main__":
@@ -164,11 +173,8 @@ if __name__ == "__main__":
         default=10,
         help="Threshold value for binary segmentation.",
     )
-
     args = parser.parse_args()
-
+    
     generate_binary_masks(
-        args.input_parent_directory,
-        args.output_parent_directory,
-        args.threshold_value,
+        args.input_parent_directory, args.output_parent_directory, True, args.threshold_value
     )
