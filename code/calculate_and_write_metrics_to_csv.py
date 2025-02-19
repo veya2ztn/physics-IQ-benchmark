@@ -77,6 +77,7 @@ def process_videos(
 
   def spatial_binary_masks(mask_frames):
     """Collapse the time dimension of binary masks into a single frame."""
+
     if not mask_frames:
       print(
           'Warning: Received empty mask_frames for spatial binary mask '
@@ -88,20 +89,16 @@ def process_videos(
     spatial_mask = np.max(mask_frames, axis=0)
     return (spatial_mask > 0).astype(np.uint8) * 255
 
-  def weighted_spatial_binary_mask(mask_frames, fps):
-      weighted_spatial_mask = np.sum(mask_frames, axis=0, dtype=np.uint16) / fps
+  def weighted_spatial_mask(mask_frames, fps):
+    """return weighted spatial masks normalized tp [0,1]"""
 
-      # Do NOT normalize the mask (removes artificial reduction in values)
-      return weighted_spatial_mask
+    weighted_spatial_mask = np.sum(mask_frames, axis=0, dtype=np.uint16) / fps
+    return weighted_spatial_mask
 
-  scenario_data = []
-  processed_scenarios = set()
-  gen_video_duration_frames = get_video_frame_count(
-      os.path.join(generated_folders, sorted(os.listdir(generated_folders))[0])
-  )
 
   def mse_per_frame(video1, video2):
     """Calculate MSE per frame for two videos."""
+
     frame_mses = [
         np.mean((frame1.astype(np.float32) - frame2.astype(np.float32)) ** 2)
         for frame1, frame2 in zip(video1, video2)
@@ -124,7 +121,6 @@ def process_videos(
     Returns:
         A list of frames from the video.
     """
-
     assert os.path.exists(filepath), f'File not found: {filepath}'
 
     cap = cv2.VideoCapture(filepath)
@@ -143,6 +139,24 @@ def process_videos(
       frame_idx += 1
     cap.release()
     return frames
+  
+
+  def compute_weighted_spatial_iou(weighted_spatial_1, weighted_spatial_2):
+    """Compute iou between two weighted spatial masks."""
+
+    # Compute intersection and union
+    intersection = np.minimum(weighted_spatial_1, weighted_spatial_2)
+    union = np.maximum(weighted_spatial_1, weighted_spatial_2)
+    
+    # Pixels where motion exists in at least one
+    valid_pixels = union > 0
+    
+    # If no valid pixels, return IOU of 1.0 (perfect match)
+    if np.sum(valid_pixels) == 0:
+        return 1.0
+    # Compute the IOU only for valid pixels
+    return np.sum(intersection[valid_pixels]) / np.sum(union[valid_pixels])
+
 
   def spatiotemporal_iou_per_frame(mask1, mask2):
     """Calculate Intersection over Union (spatiotemporal_iou) per frame for two binary masks."""
@@ -156,6 +170,7 @@ def process_videos(
             spatiotemporal_iou = intersection / union
         spatiotemporal_iou_values.append(spatiotemporal_iou)
     return spatiotemporal_iou_values
+
 
   scenario_data = []
   processed_scenarios = set()
@@ -197,8 +212,7 @@ def process_videos(
       A dictionary of calculated metrics.
     """
 
-    print(f'## Processing scenario: {scenario_name} with perspective: {view}')
-
+    print('-- Processing scenario: ', scenario_name + ' -- view: ' + view)
     real_path_v1 = os.path.join(real_folders, f'{scenario_ID_take_1}_testing-videos_{fps}FPS_{view}_take-1_{scenario_name}')
     generated_path = os.path.join(
         generated_folders, f'{scenario_ID_take_1}_{view}_{scenario_name}'
@@ -277,53 +291,33 @@ def process_videos(
     ):
       raise ValueError(f"Scenario {scenario_name}_{view} has missing frames.")
 
-    # Create subdirectories for each model in spatial and weighted_spatial maps
-    # folders
-    model_name = generated_folders.split('/')[-1]
-
 
     # Calculate spatiotemporal_iou for v1 and v2 masks
     spatiotemporal_iou_v1 = spatiotemporal_iou_per_frame(binary_v1_frames, binary_generated_frames)
     spatiotemporal_iou_v2 = spatiotemporal_iou_per_frame(binary_v2_frames, binary_generated_frames)
 
+
     # Collapse binary masks over time to calculate spatial IOU
     spatial_v1 = spatial_binary_masks(binary_v1_frames)
     spatial_v2 = spatial_binary_masks(binary_v2_frames)
 
-    # Calculate spatial spatiotemporal_iou for v1 and v2
-    spatial_generated = spatial_binary_masks(binary_generated_frames)
 
+    # Calculate spatial_iou for v1 and v2
+    spatial_generated = spatial_binary_masks(binary_generated_frames)
     iou_v1_spatial = spatiotemporal_iou_per_frame([spatial_v1], [spatial_generated])[0]
     iou_v2_spatial = spatiotemporal_iou_per_frame([spatial_v2], [spatial_generated])[0]
 
 
+    # Calculate the weighted spatial iou masks
+    weighted_spatial_v1 = weighted_spatial_mask(binary_v1_frames, fps)
+    weighted_spatial_v2 = weighted_spatial_mask(binary_v2_frames, fps)
+    weighted_spatial_generated = weighted_spatial_mask(binary_generated_frames, fps) 
 
-    # Calculate weighted_spatial presence spatiotemporal_iou for v1 and v2 masks
-    weighted_spatial_v1 = weighted_spatial_binary_mask(binary_v1_frames, fps)
-    weighted_spatial_v2 = weighted_spatial_binary_mask(binary_v2_frames, fps)
-    weighted_spatial_generated = weighted_spatial_binary_mask(binary_generated_frames, fps) 
 
-    # Compute intersection and union for v1
-    intersection_v1 = np.minimum(weighted_spatial_v1, weighted_spatial_generated)
-    union_v1 = np.maximum(weighted_spatial_v1, weighted_spatial_generated)
-    valid_pixels_v1 = union_v1 > 0  # Pixels where motion exists in at least one
+    # Compute weighted spatial iou for v1 and v2 
+    iou_v1_weighted_spatial = compute_weighted_spatial_iou(weighted_spatial_v1, weighted_spatial_generated)
+    iou_v2_weighted_spatial = compute_weighted_spatial_iou(weighted_spatial_v2, weighted_spatial_generated)
 
-    # Compute spatiotemporal_iou only for valid pixels, and if both are empty, set spatiotemporal_iou to 1
-    if np.sum(valid_pixels_v1) == 0:
-        iou_v1_weighted_spatial = 1.0  # No motion in either → Perfect match
-    else:
-        iou_v1_weighted_spatial = np.sum(intersection_v1[valid_pixels_v1]) / np.sum(union_v1[valid_pixels_v1])
-
-    # Compute intersection and union for v2
-    intersection_v2 = np.minimum(weighted_spatial_v2, weighted_spatial_generated)
-    union_v2 = np.maximum(weighted_spatial_v2, weighted_spatial_generated)
-    valid_pixels_v2 = union_v2 > 0  # Pixels where motion exists in at least one
-
-    # Compute weighted_spatial iou only for valid pixels, and if both are empty, set to 1
-    if np.sum(valid_pixels_v2) == 0:
-        iou_v2_weighted_spatial = 1.0  # No motion in either → Perfect match
-    else:
-        iou_v2_weighted_spatial = np.sum(intersection_v2[valid_pixels_v2]) / np.sum(union_v2[valid_pixels_v2])
 
     # Compute weighted_spatial variance
     intersection = np.minimum(weighted_spatial_v1, weighted_spatial_v2)
@@ -335,6 +329,7 @@ def process_videos(
     else:
         variance_weighted_spatial = np.sum(intersection) / np.sum(union)
 
+
     variance_spatial = spatiotemporal_iou_per_frame(
         [spatial_v1], [spatial_v2]
     )  
@@ -343,13 +338,12 @@ def process_videos(
         binary_v1_frames, binary_v2_frames
     )  # Calculate per-frame spatiotemporal_iou between v1 and v2 masks
 
-    # Calculate variance MSE
+    # Calculate physical variance MSE
     variance_mse = mse_per_frame(
         real_v1_frames, real_v2_frames
     )  # Calculate MSE between v1 and v2 frames
 
     # Return the result for this view
-    print(iou_v1_weighted_spatial, variance_weighted_spatial)
     out = {
       f'v1_mse_{view}': mse_per_frame(real_v1_frames, generated_frames),
       f'v2_mse_{view}': mse_per_frame(real_v2_frames, generated_frames),
@@ -438,3 +432,115 @@ def process_videos(
       df.to_csv(csv_file_path, index=False)
   else:
       print('No data to write to CSV')
+
+
+
+
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description='Process videos and plot MSE.')
+  parser.add_argument(
+      '--real_folder',
+      type=str,
+      nargs='+',
+      help='Paths to the folders containing real videos.',
+  )
+  parser.add_argument(
+      '--generated_folder',
+      type=str,
+      nargs='+',
+      help='Paths to the folders containing generated videos.',
+  )
+  parser.add_argument(
+      '--binary_real_folder',
+      type=str,
+      nargs='+',
+      help='Paths to the folders containing binary real videos.',
+  )
+  parser.add_argument(
+      '--binary_generated_folders',
+      type=str,
+      nargs='+',
+      help='Paths to the folders containing binary generated videos.',
+  )
+  parser.add_argument(
+      '--csv_files',
+      type=str,
+      nargs='+',
+      help='Paths to the CSV files containing scenarios and MSE values.',
+  )
+  parser.add_argument(
+      '--fps',
+      type=float,
+      nargs='+',
+      required=True,
+      help='FPS for each CSV file. Must match the number of CSV files.',
+  )
+  parser.add_argument(
+      '--video_time',
+      type=str,
+      nargs='+',
+      choices=['first', 'last'],
+      default=['last'],
+      help=(
+          'Choose whether to pick the first or last 5 seconds '
+          'of the video. Must match the number of CSV files.'
+      ),
+  )
+
+  args = parser.parse_args()
+  print(args.real_folder, args.generated_folder)
+  if len(args.real_folder) != len(args.generated_folder):
+    raise ValueError(
+        'The number of real folders must match the number of generated folders.'
+    )
+  if len(args.real_folder) != len(args.csv_files):
+    raise ValueError(
+        'The number of real folders must match the number of CSV files.'
+    )
+  if len(args.real_folder) != len(args.fps):
+    raise ValueError(
+        'The number of real folders must match the number of FPS values.'
+    )
+  if len(args.video_time) != len(args.csv_files):
+    raise ValueError(
+        'The number of video time options must match the number of CSV files.'
+    )
+
+  # Process the videos and update the CSV files
+  for (
+      real_folder,
+      generated_folder,
+      binary_real_folder,
+      binary_generated_folder,
+      csv_file,
+      fps,
+      video_time,
+  ) in zip(
+      args.real_folder,
+      args.generated_folder,
+      args.binary_real_folder,
+      args.binary_generated_folders,
+      args.csv_files,
+      args.fps,
+      args.video_time,
+  ):
+    print(
+        f"Processing {csv_file} with FPS {fps}, video time '{video_time}' using"
+        f" real folder '{real_folder}' and generated folder"
+        f" '{generated_folder}'."
+    )
+
+    csv_data = pd.read_csv(csv_file)
+
+
+    # Proceed with processing if the row count is correct
+    process_videos(
+        real_folder,
+        generated_folder,
+        binary_real_folder,
+        binary_generated_folder,
+        csv_file,
+        fps,
+        video_time,
+    )

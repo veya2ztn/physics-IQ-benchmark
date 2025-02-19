@@ -36,8 +36,8 @@ The best possible score on Physics-IQ is 100.0%, this score would be achieved by
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
 | 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **29.5 %** :1st_place_medal: |
-| 3 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 23.0 % :2nd_place_medal: |
-| 2 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
+| 2 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 23.0 % :2nd_place_medal: |
+| 3 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
 | 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 20.3 % |
 | 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 19.0 % |
 | 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 14.8 % |
@@ -160,13 +160,6 @@ python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_
 
 ---
 
-## Leaderboard
-
-<p align="center">
-  <img src="assets/physics_IQ_score.png" width="75%" alt="Comparison of metrics for different models">
-</p>
-
----
 
 ## Citation
 

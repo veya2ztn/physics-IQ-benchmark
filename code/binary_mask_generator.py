@@ -19,11 +19,6 @@ import os
 import cv2
 import numpy as np
 
-import argparse
-import os
-import cv2
-import numpy as np
-
 def generate_mask(
     in_path: str, out_video_path: str, is_real: bool, threshold_value: int = 10
 ) -> None:
@@ -83,8 +78,7 @@ def generate_mask(
         gray_frame = cv2.GaussianBlur(gray_frame, (5, 5), 0)
         avg_frame = gray_frame.astype("float")
 
-        # Write the first frame's mask (ensure consistency)
-        # Write the first frame's mask and increment count
+        # Write the first frame's mask
         first_mask = np.zeros_like(gray_frame, dtype=np.uint8)
         out.write(first_mask)
         generated_frame_count = 1  # Account for the first written frame
@@ -117,7 +111,7 @@ def generate_mask(
         out.release()
         print(f"Processed video saved at {out_video_path}")
         print(f"Input video frame count: {input_frame_count}")
-        print(f"Number of generated frames: {generated_frame_count}")
+        print(f"Number of generated mask frames: {generated_frame_count}")
 
     except cv2.error as e:
         print(f"Error processing video {in_path}: {e}")
