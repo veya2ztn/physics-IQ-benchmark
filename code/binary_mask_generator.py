@@ -51,6 +51,7 @@ def generate_mask(
         name_parts = out_video_path.split('/')
         name_parts_last = name_parts[-1].split('_')
         
+        #Account for name difference between real and generated videos and save the mask accordingly
         if is_real:
             replace_last_part = (
                 name_parts_last[0] + '_video-masks_' + f'{int(fps)}FPS_' + name_parts_last[3] + '_' + name_parts_last[4] + '_'+ name_parts_last[5]

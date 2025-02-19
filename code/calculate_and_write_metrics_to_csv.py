@@ -89,20 +89,30 @@ def process_videos(
     spatial_mask = np.max(mask_frames, axis=0)
     return (spatial_mask > 0).astype(np.uint8) * 255
 
-  def weighted_spatial_mask(mask_frames, fps):
-    """return weighted spatial masks normalized tp [0,1]"""
+  def weighted_spatial_mask(mask_frames):
+    """return weighted spatial masks"""
 
-    weighted_spatial_mask = np.sum(mask_frames, axis=0, dtype=np.uint16) / fps
+    #normalize the values to [0,1]
+    weighted_spatial_mask = np.sum(mask_frames, axis=0, dtype=np.uint16) / len(mask_frames)
     return weighted_spatial_mask
 
 
   def mse_per_frame(video1, video2):
     """Calculate MSE per frame for two videos."""
-
-    frame_mses = [
-        np.mean((frame1.astype(np.float32) - frame2.astype(np.float32)) ** 2)
-        for frame1, frame2 in zip(video1, video2)
-    ]
+    
+    # Ensure both videos have the same number of frames and frame dimensions
+    if len(video1) != len(video2):
+        raise ValueError("Videos must have the same number of frames.")
+    
+    frame_mses = []
+    for frame1, frame2 in zip(video1, video2):
+        if frame1.shape != frame2.shape:
+            raise ValueError("Frames must have the same dimensions.")
+        
+        # Calculate MSE for this frame
+        mse = np.mean((frame1.astype(np.float32) - frame2.astype(np.float32)) ** 2)
+        frame_mses.append(mse)
+    
     return frame_mses
 
 
@@ -275,7 +285,7 @@ def process_videos(
         target_size,
         normalize=False,
     )
-    # Ensure binary masks are binary (0 or 1 pixel values)
+    # Ensure masks are binary (0 or 1 pixel values)
     binary_v1_frames = [(mask > 127).astype(np.uint8) for mask in binary_v1_frames]
     binary_v2_frames = [(mask > 127).astype(np.uint8) for mask in binary_v2_frames]
     binary_generated_frames = [(mask > 127).astype(np.uint8) for mask in binary_generated_frames]
@@ -297,7 +307,7 @@ def process_videos(
     spatiotemporal_iou_v2 = spatiotemporal_iou_per_frame(binary_v2_frames, binary_generated_frames)
 
 
-    # Collapse binary masks over time to calculate spatial IOU
+    # Collapse binary masks over time to calculate spatial iou
     spatial_v1 = spatial_binary_masks(binary_v1_frames)
     spatial_v2 = spatial_binary_masks(binary_v2_frames)
 
@@ -309,9 +319,9 @@ def process_videos(
 
 
     # Calculate the weighted spatial iou masks
-    weighted_spatial_v1 = weighted_spatial_mask(binary_v1_frames, fps)
-    weighted_spatial_v2 = weighted_spatial_mask(binary_v2_frames, fps)
-    weighted_spatial_generated = weighted_spatial_mask(binary_generated_frames, fps) 
+    weighted_spatial_v1 = weighted_spatial_mask(binary_v1_frames)
+    weighted_spatial_v2 = weighted_spatial_mask(binary_v2_frames)
+    weighted_spatial_generated = weighted_spatial_mask(binary_generated_frames) 
 
 
     # Compute weighted spatial iou for v1 and v2 
@@ -333,10 +343,10 @@ def process_videos(
     variance_spatial = spatiotemporal_iou_per_frame(
         [spatial_v1], [spatial_v2]
     )  
-    # Calculate variance IOU
+    # Calculate physical variance of spatiotemporal iou
     variance_spatiotemporal_iou = spatiotemporal_iou_per_frame(
         binary_v1_frames, binary_v2_frames
-    )  # Calculate per-frame spatiotemporal_iou between v1 and v2 masks
+    )  # Calculate per-frame spatiotemporal iou between v1 and v2 masks
 
     # Calculate physical variance MSE
     variance_mse = mse_per_frame(
@@ -356,7 +366,7 @@ def process_videos(
       f'spatial_iou_v1_{view}': iou_v1_spatial,  # Spatial iou for v1 per view
       f'spatial_iou_v2_{view}': iou_v2_spatial,  # Spatial iou for v2 per view
       f'weighted_spatial_iou_v1_{view}': iou_v1_weighted_spatial,  # weighted_spatial for v1 per view
-      f'weighted_spatial_iou_v2_{view}': iou_v2_weighted_spatial,  # weighted_spatial  for v2 per view
+      f'weighted_spatial_iou_v2_{view}': iou_v2_weighted_spatial,  # weighted_spatial for v2 per view
     }
 
     del real_v1_frames, real_v2_frames, generated_frames
