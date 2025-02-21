@@ -91,14 +91,15 @@ def calculate_iq_score(file_path: str) -> tuple[float, float]:
 
   list_length = len(df[f"v1_mse_perspective-left"].iloc[0]) if len(df) > 0 else 0
 
-  total_sum_v1_mse = df[
-    [f"v1_mse_{view}" for view in VIEWS]
-  ].apply(lambda x: np.mean(np.concatenate(x)), axis=1).mean()
-
-  total_sum_spatiotemporal_iou_v1 = df[
-      [f"spatiotemporal_iou_v1_{view}" for view in VIEWS]
-  ].apply(lambda x: np.mean(np.concatenate(x)), axis=1).mean()
-
+  total_sum_v1_mse = df.apply(
+      lambda row: np.mean(np.concatenate([row[f"v1_mse_{view}"] for view in VIEWS])),
+      axis=1
+  ).mean()
+  
+  total_sum_spatiotemporal_iou_v1 = df.apply(
+    lambda row: np.mean(np.concatenate([row[f"spatiotemporal_iou_v1_{view}"] for view in VIEWS])),
+    axis=1
+  ).mean()
 
   # Aggregate across views for spatial and weighted_spatial IOU
   total_sum_spatial_iou = df[[f"spatial_iou_v1_{view}" for view in VIEWS]].mean().mean()
@@ -151,8 +152,6 @@ def calculate_iq_score(file_path: str) -> tuple[float, float]:
   final_score = round(max(min(final_score, 100.0), 0.0), 2)
 
   return final_score, physical_variance_all_metrics
-
-
 
 
 def process_directory(directory_path: str) -> None:
@@ -227,3 +226,4 @@ def process_directory(directory_path: str) -> None:
   ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:.0f}%"))
   plt.tight_layout()
   plt.savefig(os.path.join(directory_path, 'physics_IQ_score_barplot.pdf'))
+
