@@ -35,8 +35,8 @@ The best possible score on Physics-IQ is 100.0%, this score would be achieved by
 
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
-| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe | **29.5 %** :1st_place_medal: |
-| 2 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe | 23.0 % :2nd_place_medal: |
+| 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe (v2v) | **29.5 %** :1st_place_medal: |
+| 2 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe (v2v) | 23.0 % :2nd_place_medal: |
 | 3 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
 | 4 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | i2v        | 20.3 % |
 | 5 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | i2v        | 19.0 % |
