@@ -44,6 +44,8 @@ The best possible score on Physics-IQ is 100.0%, this score would be achieved by
 | 7 | [Pika](https://pika.art/)                                              | i2v        |  13.0 % |
 | 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  10.0 % |
 
+*Note to early adopters of the benchmark: These results were finalized on February 19, 2025; if you used the toolbox before please re-run since we changed and improved a few aspects. Likewise, if you downloaded the dataset before that date, it is recommended to re-download it, ensuring the ground truth video masks have a duration of five seconds.*
+
 ---
 
 ## Step A: Generating Videos for Physics-IQ Test Cases Based on Video Model
