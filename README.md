@@ -158,9 +158,9 @@ physics-IQ-benchmark/
 python3 code/run_physics_iq.py --input_folders <generated_videos_dirs> --output_folder <output_dir> --descriptions_file <descriptions_file>
 ```
 **Parameters:**
-- `--input_folders: The path to the directories containing input videos (in `.mp4` format), with one directory per model (/model_name/video.mp4)
-- `--output_folder`: The path to the directory where output csv files will be saved
-- `--descriptions_file`: The path to the descriptions.csv file
+- `--input_folders`: The path to the directories containing input videos (in `.mp4` format), with one directory per model (e.g., `/model_name/video.mp4`).
+- `--output_folder`: The path to the directory where output CSV files will be saved.
+- `--descriptions_file`: The path to the `descriptions.csv` file.
 
 ---
 
