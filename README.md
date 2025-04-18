@@ -33,7 +33,7 @@ Project website: [physics-iq.github.io](https://physics-iq.github.io/)
 ## Leaderboard
 The best possible score on Physics-IQ is 100.0%, this score would be achieved by physically realistic videos that differ only in physical randomness but adhere to all tested principles of physics.
 
-If you test your model on Physics-IQ and would like your score/paper/model to be featured here in this table, feel free to open a pull request and we'll be happy to include it!
+If you test your model on Physics-IQ and would like your score/paper/model to be featured here in this table, feel free to open a pull request that adds a row to the table and we'll be happy to include it!
 
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
