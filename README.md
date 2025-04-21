@@ -37,6 +37,7 @@ If you test your model on Physics-IQ and would like your score/paper/model to be
 
 | **#** | **Model** | **input type** | **Physics-IQ score** |
 | -- | --- | --- | --- |
+| 0 | [Magi-1](https://github.com/SandAI-org/MAGI-1)| multiframe (v2v) | **56.0 %**  |
 | 1 | [VideoPoet](https://arxiv.org/abs/2312.14125)                          | multiframe (v2v) | **29.5 %** :1st_place_medal: |
 | 2 | [Lumiere](https://arxiv.org/abs/2401.12945)                            | multiframe (v2v) | 23.0 % :2nd_place_medal: |
 | 3 | [Runway Gen 3](https://runwayml.com/research/introducing-gen-3-alpha)  | i2v        | 22.8 % :3rd_place_medal: |
@@ -45,7 +46,6 @@ If you test your model on Physics-IQ and would like your score/paper/model to be
 | 6 | [Stable Video Diffusion](https://arxiv.org/abs/2311.15127)             | i2v        | 14.8 % |
 | 7 | [Pika](https://pika.art/)                                              | i2v        |  13.0 % |
 | 8 | [Sora](https://openai.com/sora/)                                       | i2v        |  10.0 % |
-
 *Note to early adopters of the benchmark: These results were finalized on February 19, 2025; if you used the toolbox before please re-run since we changed and improved a few aspects. Likewise, if you downloaded the dataset before that date, it is recommended to re-download it, ensuring the ground truth video masks have a duration of five seconds.*
 
 ---
