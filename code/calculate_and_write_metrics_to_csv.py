@@ -403,6 +403,7 @@ def process_videos(
           else:
               raise ValueError('File must contain either take-1 or take-2')
 
+  
   # Second pass: Process each scenario
   for scenario_name, ids in scenario_info.items():
       take_1_views = ids["take-1"]  # Dictionary of views and IDs for take-1
@@ -420,20 +421,26 @@ def process_videos(
       scenario_result = {'scenario': scenario_name}
 
       # Process each view in parallel
-      with pool.ThreadPool(processes=1) as executor:
-          futures = [
-              executor.apply_async(process_view, 
-                                  (scenario_name, view, take_1_views[view], take_2_views[view], int(fps)))
-              for view in ['perspective-left', 'perspective-center', 'perspective-right']
-          ]
-          for future in futures:
-              view_result = future.get()
-              if view_result:
-                  for key, value in view_result.items():
-                      if isinstance(value, list):
-                          scenario_result[key] = [float(v) for v in value]
-                      else:
-                          scenario_result[key] = value
+      for view in ['perspective-left', 'perspective-center', 'perspective-right']:
+         view_result = process_view(scenario_name, view, take_1_views[view], take_2_views[view], int(fps))
+         if view_result:
+            for key, value in view_result.items():
+                if isinstance(value, list):
+                    scenario_result[key] = [float(v) for v in value]
+                else:
+                    scenario_result[key] = value
+      # with pool.ThreadPool(processes=1) as executor:
+      #     futures = [
+      #         executor.apply_async(process_view, (scenario_name, view, take_1_views[view], take_2_views[view], int(fps))) for view in ['perspective-left', 'perspective-center', 'perspective-right']
+      #     ]
+      #     for future in futures:
+      #         view_result = future.get()
+      #         if view_result:
+      #             for key, value in view_result.items():
+      #                 if isinstance(value, list):
+      #                     scenario_result[key] = [float(v) for v in value]
+      #                 else:
+      #                     scenario_result[key] = value
       scenario_data.append(scenario_result)
 
   # Convert list to DataFrame and write to CSV

@@ -89,21 +89,43 @@ def change_video_fps(input_folder: str, output_folder: str, fps_new: float) -> N
 
             # Save the new video
             new_file_name = video_file
-            new_file_path = os.path.join(output_folder, new_file_name)
+            new_file_path = os.path.join(output_folder, new_file_name.replace("30FPS", f"{int(fps_new)}FPS"))
 
-            print(f"Saving video with dimensions: {width}x{height}, Codec: H.264")
-            out = cv2.VideoWriter(
-                new_file_path,
-                cv2.VideoWriter_fourcc(*"avc1"),  # Use H.264 codec
-                fps_new,
-                (width, height)
-            )
-
-            for frame in frames_new:
-                out.write(cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR))
-
-            out.release()
-            print(f"Saved new video to: {new_file_path}")
+            # Try different codecs in order of preference
+            codecs = [
+                # ("avc1", "H.264"),
+                ("mp4v", "MPEG-4"),
+                # ("XVID", "XVID"),
+                # ("MJPG", "Motion JPEG")
+            ]
+            
+            success = False
+            for codec, codec_name in codecs:
+                try:
+                    print(f"Attempting to use {codec_name} codec...")
+                    out = cv2.VideoWriter(
+                        new_file_path,
+                        cv2.VideoWriter_fourcc(*codec),
+                        fps_new,
+                        (width, height)
+                    )
+                    
+                    if out.isOpened():
+                        print(f"Successfully opened VideoWriter with {codec_name} codec")
+                        for frame in frames_new:
+                            out.write(cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR))
+                        out.release()
+                        print(f"Saved new video to: {new_file_path}")
+                        success = True
+                        break
+                    else:
+                        print(f"Failed to open VideoWriter with {codec_name} codec")
+                        out.release()
+                except Exception as e:
+                    print(f"Error with {codec_name} codec: {e}")
+            
+            if not success:
+                print(f"Failed to save video with any codec. Please check your OpenCV installation.")
 
         except Exception as e:
             print(f"Error processing {video_file}: {e}")
