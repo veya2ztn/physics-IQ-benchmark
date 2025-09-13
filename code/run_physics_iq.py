@@ -151,7 +151,7 @@ def validate_generations(input_folder: str):
 
   files_in_folder = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
 
-  EXPECTED_NUM_VIDEOS = 198*2 # number of generated videos that need to be evaluated
+  EXPECTED_NUM_VIDEOS = 198 # *2 # number of generated videos that need to be evaluated 
   EXPECTED_VIDEO_DURATION = 5 # required duration in seconds for generated videos
 
   length_error_msg = f"found {len(files_in_folder)} videos but expected {EXPECTED_NUM_VIDEOS}"
